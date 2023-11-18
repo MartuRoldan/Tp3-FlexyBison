@@ -1,0 +1,3 @@
+Inicio
+esquisofrenia
+Fin
