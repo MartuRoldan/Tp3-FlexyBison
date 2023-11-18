@@ -23,14 +23,15 @@ void yyerror(char const *);
 %token <cadena> ID
 %token <num> CONSTANTE
 
-/* Cambié objetivo por programa */
-%start programa
+%start objetivo
 
 %%
 
-/* objetivo: programa FDT */
+objetivo: programa FDT {exit(0);}
+;
 
-programa: INICIO listaSentencias FIN {printf("\n\nAnalisis sintactico efectuado con exito");}
+programa: INICIO listaSentencias FIN {printf("\n\nAnalisis sintactico efectuado con exito"); exit(0);}
+;
 
 listaSentencias:     listaSentencias sentencia 
                     |sentencia
@@ -40,38 +41,46 @@ sentencia:   asignacion
             |entradaSalida
 ;
 
-asignacion: identificador {if(yyleng>32) yyerror("El ID es demasiado largo\n");} ASIGNACION expresion PYCOMA
+asignacion: ID {if(yyleng>32) yyerror("El ID es demasiado largo\n");} ASIGNACION expresion PYCOMA {asignar($1, $3);}
 ;
 
 entradaSalida:  LEER PARENIZQUIERDO listaIdentificadores PARENDERECHO PYCOMA
                 |ESCRIBIR PARENIZQUIERDO listaExpresiones PARENDERECHO PYCOMA
 ;
 
-listaIdentificadores:    identificador
-                        |listaIdentificadores COMA identificador
+listaIdentificadores:    ID
+                        |listaIdentificadores COMA ID
 ;
 
 listaExpresiones:    expresion
                     |listaExpresiones COMA expresion
 ;
 
-expresion:   primaria 
-            |expresion operadorAditivo primaria
+expresion:   primaria                           {$$ = $1;}
+            |expresion operadorAditivo primaria {$$ = $1 + $3;}
 ; 
 
-primaria:    identificador
-            |CONSTANTE
-            |PARENIZQUIERDO expresion PARENDERECHO
+primaria:    ID
+            |CONSTANTE                              {$$ = $1;}
+            |PARENIZQUIERDO expresion PARENDERECHO  {$$ = $2;}
 ;
 
 operadorAditivo: SUMA
                 |RESTA
 ;
 
-identificador: ID
-;
-
 %%
+#define largo 40
+
+typedef struct Id {
+		char nombre[largo]; //nombre de la variable
+		int valor;		    //valor de la variable
+} Id;
+
+Id buffer[500]; //Armo una lista de identificadores para irlos guardando ahi
+int tope = 0; //me dice cuantos identificadores tengo en la lista
+int buscar(char* nombre);
+void asignar(char* nombre, int valor);
 
 int main(int argc, char *argv []) {
     if((yyin = fopen(argv[1], "rt")) == NULL) {
@@ -99,3 +108,26 @@ void yyerror (char const *s) {
 int yywrap() {
     return 1;  
 } 
+
+void asignar(char* nombre, int valor) {	
+	int i = buscar(nombre);
+	if(i < 0) { // el ID no esta en el buffer
+		strcpy(buffer[tope].nombre, nombre);
+		buffer[tope].valor = valor;
+		tope++;
+	} 
+	else { 
+		buffer[indice].valor = valor;
+	}	
+}
+
+int buscar(char* nombre) {
+	int i;
+	for(i = 0; i < tope; i++) {
+		if(!strcmp(buffer[i].nombre, nombre)){
+			return i;
+		}
+	}
+	return -1;
+/* Si el identificador no está en el buffer (índice es menor que 0), lo agrega al final del buffer con su valor correspondiente */
+}
